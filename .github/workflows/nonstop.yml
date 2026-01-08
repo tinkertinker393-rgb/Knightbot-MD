@@ -1,4 +1,4 @@
-name: KnightBot-MD Ultra-Fast
+name: KnightBot-MD Ultra-Nonstop
 
 on:
   workflow_dispatch:
@@ -21,34 +21,37 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # Removed the 'cache' line because you don't have a lock file
 
       - name: Install Dependencies
-        run: |
-          npm install --no-audit
-          # Changed 'npm ci' to 'npm install' to fix the error
+        run: npm install --no-audit
 
-      - name: Run Bot and Auto-Loop
-        env:
-          MY_TOKEN: ${{ secrets.BEEF }}
+      - name: Inject Session File
         run: |
-          # 1. THE RESTART HANDOFF (5.5 Hour Mark)
+          mkdir -p session
+          echo '${{ secrets.SESSION_DATA }}' > session/creds.json
+          echo "✅ Session file injected successfully."
+
+      - name: Run Bot with High Priority
+        env:
+          GITHUB_TOKEN: ${{ secrets.BEEF }}
+        run: |
+          # 1. THE 5-HOUR REFRESH (Prevents GitHub Shutdown)
           (
-            sleep 19800
-            echo "Refreshing session to prevent GitHub timeout..."
-            curl -X POST -H "Authorization: token $MY_TOKEN" \
+            sleep 18000
+            echo "Refreshing session to prevent timeout..."
+            curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/actions/workflows/nonstop.yml/dispatches" \
             -d '{"ref":"main"}'
           ) &
 
-          # 2. THE PERFORMANCE LOOP
-          # We removed 'sudo nice' to avoid permission issues and used standard node execution
-          echo "KnightBot-MD is live..."
+          # 2. THE ULTIMATE PERFORMANCE LOOP
+          # Uses 3GB RAM and optimized engine for instant command reaction
+          echo "🚀 KnightBot-MD is going live..."
           while true; do
-            node --expose-gc --optimize_for_size --max-old-space-size=2048 index.js || \
-            node --expose-gc --optimize_for_size --max-old-space-size=2048 main.js
+            node --expose-gc --optimize_for_size --max-old-space-size=3072 index.js || \
+            node --expose-gc --optimize_for_size --max-old-space-size=3072 main.js
             
-            echo "Bot crashed. Restarting instantly..."
-            sleep 5
+            echo "⚠️ Bot crashed. Restarting instantly..."
+            sleep 2
           done
