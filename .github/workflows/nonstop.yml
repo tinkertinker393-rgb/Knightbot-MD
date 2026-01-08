@@ -1,0 +1,57 @@
+name: KnightBot-MD Ultra-Fast
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+# Ensures the old bot is killed only when a new one is ready
+concurrency:
+  group: bot-runtime
+  cancel-in-progress: true
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Fast Checkout
+        uses: actions/checkout@v4 # Use v4 for faster fetching
+
+      - name: Optimized Node Setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Node 20 is significantly faster than 18
+          cache: 'npm' # Built-in caching for node_modules
+
+      - name: Instant Dependency Install
+        run: |
+          npm ci --prefer-offline --no-audit
+          # 'ci' is faster than 'install'; 'prefer-offline' skips network checks
+
+      - name: Run Bot with High Priority
+        env:
+          MY_TOKEN: ${{ secrets.BEEF }}
+        run: |
+          # 1. THE RESTART HANDOFF (5.5 Hour Mark)
+          # We trigger the new runner BEFORE the old one dies to keep cache fresh
+          (
+            sleep 19800
+            echo "Refreshing session to prevent GitHub timeout..."
+            curl -X POST -H "Authorization: token $MY_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/nonstop.yml/dispatches" \
+            -d '{"ref":"main"}'
+          ) &
+
+          # 2. THE PERFORMANCE LOOP
+          # We use 'nice -n -20' to give the process the highest CPU priority possible
+          # We use Node flags to optimize the V8 engine for speed
+          echo "KnightBot-MD is live..."
+          while true; do
+            sudo nice -n -20 node --expose-gc --optimize_for_size --max-old-space-size=2048 index.js || \
+            sudo nice -n -20 node --expose-gc --optimize_for_size --max-old-space-size=2048 main.js
+            
+            echo "Bot crashed. Restarting instantly..."
+            sleep 1 # Minimal delay to avoid loop-lock
+          done
